@@ -1,10 +1,15 @@
 import org.apache.commons.io.FilenameUtils
+import qupath.lib.images.ImageData
 import qupath.lib.images.servers.ColorTransforms
 import qupath.lib.objects.classes.PathClassFactory
+
+import java.awt.image.BufferedImage
+
 import static qupath.lib.gui.scripting.QPEx.*
 import qupath.ext.stardist.StarDist2D
 import qupath.lib.gui.dialogs.Dialogs
-
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import qupath.lib.images.servers.TransformedServerBuilder
 
 // init project
 
@@ -15,7 +20,6 @@ if (pathModel == null)
     print('No model found')
 
 def imageDir = new File(project.getImageList()[0].getUris()[0]).getParent()
-def dnn = DnnTools.builder(pathModel).build()
 // create results file and write headers
 def resultsDir = buildFilePath(imageDir, 'Results')
 if (!fileExists(resultsDir)) {
@@ -23,14 +27,15 @@ if (!fileExists(resultsDir)) {
 }
 def resultsFile = new File(buildFilePath(resultsDir, 'Results.csv'))
 resultsFile.createNewFile()
-def resHeaders = 'Image Name\tAnnotation Name\tArea\tnb Cells\tCell density\tCells Mean intensity\n'
+def resHeaders = 'Image Name\tAnnotation Name\tArea\tnb Cells\tCell density\tCells Mean intensity\tCells Std intensity\tCells Median intensity\t' +
+        'Cells Mean area\tCells Std area\tCells Median area\n'
 resultsFile.write(resHeaders)
 
 // Classpath definition
 def cellsClass = PathClassFactory.getPathClass('Cells', makeRGB(0,0,255))
 
 def stardistCells = StarDist2D.builder(pathModel)
-          .threshold(0.60)         // Prediction threshold
+          .threshold(0.50)         // Prediction threshold
           .normalizePercentiles(1, 99)     // Percentile normalization
           .pixelSize(0.25)             // Resolution for detection
           .channels(ColorTransforms.createColorDeconvolvedChannel(getCurrentImageData().getColorDeconvolutionStains(), 2))
@@ -54,35 +59,43 @@ def saveAnnotations(imgName) {
     println('Annotations saved...')
 }
 
-// Get objects intensity
-def getObjectsIntensity(cells, channel) {
-    def measure = channel + ': Mean'
-    def means = 0
+// Get objects parameters (mean, std, median)
+def getObjectsParameters(cells, param) {
+    def params = new DescriptiveStatistics();
     def nbCells = cells.size()
     if (nbCells) {
         for (cell in cells) {
-            means += cell.getMeasurementList().getMeasurementValue(measure)
+            params.addValue(cell.getMeasurementList().getMeasurementValue(param))
         }
-        means = means / cells.size()
     }
-    return means
+    def paramsValues = [params.mean, params.standardDeviation, params.getPercentile(50)]
+    return paramsValues
 }
 
 // loop over images in project
 
 for (entry in project.getImageList()) {
+
+// Set color deconvolution for HE & PAS
+    setImageType('Brightfield (other)')
+    setColorDeconvolutionStains('{"Name" : "He-PAS", "Stain 1" : "Hematoxylin", "Values 1" : "0.6446 0.71666 0.26625", "Stain 2" : "PAS", "Values 2" : "0.17508 0.97243 0.15407", "Background" : " 253 253 253"}');
+
     def imageData = entry.readImageData()
     def server = imageData.getServer()
+    /*def server = new TransformedServerBuilder(imageData.getServer())
+        .deconvolveStains(imageData.getColorDeconvolutionStains())
+        .build()
+    imageData = new ImageData<BufferedImage>(server)*/
     def cal = server.getPixelCalibration()
     def pixelWidth = cal.getPixelWidth().doubleValue()
     def pixelUnit = cal.getPixelWidthUnit()
     def imgName = entry.getImageName()
     def imgNameWithOutExt = FilenameUtils.removeExtension(imgName)
-
-
     setBatchProjectAndImage(project, imageData)
     clearAnnotations()
     clearAllObjects()
+
+
     println('-Finding intestine region ...')
     def classifier = project.getPixelClassifiers().get('Intestine')
     createAnnotationsFromPixelClassifier(classifier, 1000.0, 0.0, 'DELETE_EXISTING')
@@ -101,21 +114,25 @@ for (entry in project.getImageList()) {
     selectAnnotations()
 
     // Do cells detections
-    // Set color deconvolution for HE & PAS
-    setImageType('Brightfield (other)')
-    setColorDeconvolutionStains('{"Name" : "He-PAS", "Stain 1" : "Hematoxylin", "Values 1" : "0.6446 0.71666 0.26625", "Stain 2" : "PAS", "Values 2" : "0.17508 0.97243 0.15407", "Background" : " 253 253 253"}');
 
     stardistCells.detectObjects(imageData, intestineRegion[0], true)
-    dnn.getPredictionFunction().net.close()
     def cells = getDetectionObjects().findAll{it.getMeasurementList().getMeasurementValue('Area µm^2') > 30 && it.getMeasurementList().getMeasurementValue('PAS: Mean') > 0.7}
     cells.each{it.setPathClass(cellsClass)}
     println 'Nb cells in region = ' + cells.size()
+
     // Find cells means intensities
-    def cellsMeanInt = getObjectsIntensity(cells, 'PAS')
+    def cellsMeanInt = getObjectsParameters(cells, 'PAS: Mean')[0]
+    def cellsStdInt = getObjectsParameters(cells, 'PAS: Mean')[1]
+    def cellsMedianInt = getObjectsParameters(cells, 'PAS: Mean')[2]
+
+    // Find cells means intensities
+    def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[0]
+    def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[1]
+    def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[2]
     println 'Mean cells intensity in region = ' + cellsMeanInt
 
     // Results
-    def results = imgNameWithOutExt + '\t' + intestineRegion[0].getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size()/regionArea+ '\t'+cellsMeanInt  + '\n'
+    def results = imgNameWithOutExt + '\t' + intestineRegion[0].getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size()/regionArea + '\t' + cellsMeanInt + '\t'+ cellsStdInt + '\t'+ cellsMedianInt + '\t'+ cellsMeanArea + '\t'+ cellsStdArea + '\t'+ cellsMedianArea + '\n'
     resultsFile << results
 
     // add detections and save detections
