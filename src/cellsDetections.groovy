@@ -1,15 +1,13 @@
 import org.apache.commons.io.FilenameUtils
-import qupath.lib.images.ImageData
+import qupath.lib.color.ColorDeconvolutionStains
+import qupath.lib.color.StainVector
 import qupath.lib.images.servers.ColorTransforms
 import qupath.lib.objects.classes.PathClassFactory
-
-import java.awt.image.BufferedImage
-
+import qupath.opencv.ops.ImageOps
 import static qupath.lib.gui.scripting.QPEx.*
 import qupath.ext.stardist.StarDist2D
 import qupath.lib.gui.dialogs.Dialogs
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
-import qupath.lib.images.servers.TransformedServerBuilder
 
 // init project
 
@@ -34,11 +32,16 @@ resultsFile.write(resHeaders)
 // Classpath definition
 def cellsClass = PathClassFactory.getPathClass('Cells', makeRGB(0,0,255))
 
+// Set color deconvolution for HE & PAS
+def stain1 = new StainVector().createStainVector("Hematoxylin",0.656, 0.695, 0.296)
+def stain2 = new StainVector().createStainVector("PAS",0.183, 0.956, 0.23)
+def colorStainsHe_PAS = new ColorDeconvolutionStains('He-PAS',stain1, stain2, 253, 253, 254)
+
 def stardistCells = StarDist2D.builder(pathModel)
           .threshold(0.50)         // Prediction threshold
           .normalizePercentiles(1, 99)     // Percentile normalization
           .pixelSize(0.25)             // Resolution for detection
-          .channels(ColorTransforms.createColorDeconvolvedChannel(getCurrentImageData().getColorDeconvolutionStains(), 2))
+          .channels(ColorTransforms.createColorDeconvolvedChannel(colorStainsHe_PAS, 2))
           .preprocess(
                   ImageOps.Filters.gaussianBlur(4)
           )
@@ -76,16 +79,8 @@ def getObjectsParameters(cells, param) {
 
 for (entry in project.getImageList()) {
 
-// Set color deconvolution for HE & PAS
-    setImageType('Brightfield (other)')
-    setColorDeconvolutionStains('{"Name" : "He-PAS", "Stain 1" : "Hematoxylin", "Values 1" : "0.6446 0.71666 0.26625", "Stain 2" : "PAS", "Values 2" : "0.17508 0.97243 0.15407", "Background" : " 253 253 253"}');
-
     def imageData = entry.readImageData()
     def server = imageData.getServer()
-    /*def server = new TransformedServerBuilder(imageData.getServer())
-        .deconvolveStains(imageData.getColorDeconvolutionStains())
-        .build()
-    imageData = new ImageData<BufferedImage>(server)*/
     def cal = server.getPixelCalibration()
     def pixelWidth = cal.getPixelWidth().doubleValue()
     def pixelUnit = cal.getPixelWidthUnit()
@@ -95,6 +90,8 @@ for (entry in project.getImageList()) {
     clearAnnotations()
     clearAllObjects()
 
+    // set color deconvolution to He&PAS
+    imageData.setColorDeconvolutionStains(colorStainsHe_PAS)
 
     println('-Finding intestine region ...')
     def classifier = project.getPixelClassifiers().get('Intestine')
