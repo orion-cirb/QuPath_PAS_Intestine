@@ -93,6 +93,7 @@ for (entry in project.getImageList()) {
     // set color deconvolution to He&PAS
     imageData.setColorDeconvolutionStains(colorStainsHe_PAS)
 
+
     println('-Finding intestine region ...')
     def classifier = project.getPixelClassifiers().get('Intestine')
     createAnnotationsFromPixelClassifier(classifier, 1000.0, 0.0, 'DELETE_EXISTING')
