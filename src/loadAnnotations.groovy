@@ -20,4 +20,5 @@ resultsDir.eachFileMatch(p) {file ->
         addObjects(annotations)
     }
 }
+setColorDeconvolutionStains('{"Name" : "He-PAS", "Stain 1" : "Hematoxylin", "Values 1" : "0.65111 0.70119 0.29049", "Stain 2" : "PAS", "Values 2" : "0.18297 0.95584 0.22996", "Background" : " 255 255 255"}');
 resolveHierarchy()
