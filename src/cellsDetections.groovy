@@ -96,7 +96,7 @@ for (entry in project.getImageList()) {
 
     println('-Finding intestine region ...')
     def classifier = project.getPixelClassifiers().get('Intestine')
-    createAnnotationsFromPixelClassifier(classifier, 300000.0, 0.0, 'DELETE_EXISTING')
+    createAnnotationsFromPixelClassifier(classifier, 300000.0, 0.0, "SPLIT", 'DELETE_EXISTING')
     // find annotations
     def hierarchy = imageData.getHierarchy()
 
@@ -109,6 +109,7 @@ for (entry in project.getImageList()) {
     def index = 0
     for (s in intestineRegion) {
         s.setName(imgNameWithOutExt + "_Intestine_" + index)
+        index++
         // get annotation area
         def regionArea = s.getROI().getScaledArea(pixelWidth, pixelWidth)
         println s.getName() + ' area = ' + regionArea + ' ' + pixelUnit
