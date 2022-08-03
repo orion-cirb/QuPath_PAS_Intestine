@@ -26,7 +26,7 @@ if (!fileExists(resultsDir)) {
 def resultsFile = new File(buildFilePath(resultsDir, 'Results.csv'))
 resultsFile.createNewFile()
 def resHeaders = 'Image Name\tAnnotation Name\tArea\tnb Cells\tCell density\tCells Mean intensity\tCells Std intensity\tCells Median intensity\t' +
-        'Cells Mean area\tCells Std area\tCells Median area\n'
+        'Cells Sum area\tCells Mean area\tCells Std area\tCells Median area\n'
 resultsFile.write(resHeaders)
 
 // Classpath definition
@@ -71,7 +71,7 @@ def getObjectsParameters(cells, param) {
             params.addValue(cell.getMeasurementList().getMeasurementValue(param))
         }
     }
-    def paramsValues = [params.mean, params.standardDeviation, params.getPercentile(50)]
+    def paramsValues = [params.sum, params.mean, params.standardDeviation, params.getPercentile(50)]
     return paramsValues
 }
 
@@ -122,18 +122,20 @@ for (entry in project.getImageList()) {
         println 'Nb cells in region = ' + cells.size()
 
         // Find cells means intensities
-        def cellsMeanInt = getObjectsParameters(cells, 'PAS: Mean')[0]
-        def cellsStdInt = getObjectsParameters(cells, 'PAS: Mean')[1]
-        def cellsMedianInt = getObjectsParameters(cells, 'PAS: Mean')[2]
-
-        // Find cells means intensities
-        def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[0]
-        def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[1]
-        def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[2]
+        def cellsMeanInt = getObjectsParameters(cells, 'PAS: Mean')[1]
+        def cellsStdInt = getObjectsParameters(cells, 'PAS: Mean')[2]
+        def cellsMedianInt = getObjectsParameters(cells, 'PAS: Mean')[3]
         println 'Mean cells intensity in region = ' + cellsMeanInt
 
+        // Find cells means intensities
+        def cellsSumArea = getObjectsParameters(cells, 'Area µm^2')[0]
+        def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[1]
+        def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[2]
+        def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[3]
+        println 'Mean cells intensity in region = ' + cellsMeanArea
+
         // Results
-        def results = imgNameWithOutExt + '\t' + s.getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size() / regionArea + '\t' + cellsMeanInt + '\t' + cellsStdInt + '\t' + cellsMedianInt + '\t' + cellsMeanArea + '\t' + cellsStdArea + '\t' + cellsMedianArea + '\n'
+        def results = imgNameWithOutExt + '\t' + s.getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size() / regionArea + '\t' + cellsMeanInt + '\t' + cellsStdInt + '\t' + cellsMedianInt+ '\t' + cellsSumArea + '\t' + cellsMeanArea + '\t' + cellsStdArea + '\t' + cellsMedianArea + '\n'
         resultsFile << results
 
         // add detections and save detections
@@ -144,6 +146,5 @@ for (entry in project.getImageList()) {
         // Save annotations in Shapes format
         saveAnnotations(buildFilePath(resultsDir, s.getName()))
     }
-
-    }
+}
 
