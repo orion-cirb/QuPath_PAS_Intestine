@@ -96,7 +96,7 @@ for (entry in project.getImageList()) {
 
     println('-Finding intestine region ...')
     def classifier = project.getPixelClassifiers().get('Intestine')
-    createAnnotationsFromPixelClassifier(classifier, 1000.0, 0.0, 'DELETE_EXISTING')
+    createAnnotationsFromPixelClassifier(classifier, 300000.0, 0.0, 'DELETE_EXISTING')
     // find annotations
     def hierarchy = imageData.getHierarchy()
 
@@ -105,41 +105,44 @@ for (entry in project.getImageList()) {
         Dialogs.showErrorMessage("Problem", "No ROIs detected")
         return
     }
-    intestineRegion[0].setName(imgNameWithOutExt+"_Intestine")
-    // get annotation area
-    def regionArea = intestineRegion[0].getROI().getScaledArea(pixelWidth, pixelWidth)
-    println intestineRegion[0].getName() + ' area = ' + regionArea + ' ' + pixelUnit
-    selectAnnotations()
+    // loop over sections
+    def index = 0
+    for (s in intestineRegion) {
+        s.setName(imgNameWithOutExt + "_Intestine_" + index)
+        // get annotation area
+        def regionArea = s.getROI().getScaledArea(pixelWidth, pixelWidth)
+        println s.getName() + ' area = ' + regionArea + ' ' + pixelUnit
+       // selectObjects(s)
 
-    // Do cells detections
+        // Do cells detections
+        stardistCells.detectObjects(imageData, s, true)
+        def cells = getDetectionObjects().findAll { it.getMeasurementList().getMeasurementValue('Area µm^2') > 30 && it.getMeasurementList().getMeasurementValue('PAS: Mean') > 0.7 }
+        cells.each { it.setPathClass(cellsClass) }
+        println 'Nb cells in region = ' + cells.size()
 
-    stardistCells.detectObjects(imageData, intestineRegion[0], true)
-    def cells = getDetectionObjects().findAll{it.getMeasurementList().getMeasurementValue('Area µm^2') > 30 && it.getMeasurementList().getMeasurementValue('PAS: Mean') > 0.7}
-    cells.each{it.setPathClass(cellsClass)}
-    println 'Nb cells in region = ' + cells.size()
+        // Find cells means intensities
+        def cellsMeanInt = getObjectsParameters(cells, 'PAS: Mean')[0]
+        def cellsStdInt = getObjectsParameters(cells, 'PAS: Mean')[1]
+        def cellsMedianInt = getObjectsParameters(cells, 'PAS: Mean')[2]
 
-    // Find cells means intensities
-    def cellsMeanInt = getObjectsParameters(cells, 'PAS: Mean')[0]
-    def cellsStdInt = getObjectsParameters(cells, 'PAS: Mean')[1]
-    def cellsMedianInt = getObjectsParameters(cells, 'PAS: Mean')[2]
+        // Find cells means intensities
+        def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[0]
+        def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[1]
+        def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[2]
+        println 'Mean cells intensity in region = ' + cellsMeanInt
 
-    // Find cells means intensities
-    def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[0]
-    def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[1]
-    def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[2]
-    println 'Mean cells intensity in region = ' + cellsMeanInt
+        // Results
+        def results = imgNameWithOutExt + '\t' + s.getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size() / regionArea + '\t' + cellsMeanInt + '\t' + cellsStdInt + '\t' + cellsMedianInt + '\t' + cellsMeanArea + '\t' + cellsStdArea + '\t' + cellsMedianArea + '\n'
+        resultsFile << results
 
-    // Results
-    def results = imgNameWithOutExt + '\t' + intestineRegion[0].getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size()/regionArea + '\t' + cellsMeanInt + '\t'+ cellsStdInt + '\t'+ cellsMedianInt + '\t'+ cellsMeanArea + '\t'+ cellsStdArea + '\t'+ cellsMedianArea + '\n'
-    resultsFile << results
-
-    // add detections and save detections
-    clearDetections()
-    addObjects(cells)
-    addObjects(intestineRegion)
-    resolveHierarchy()
-    // Save annotations in Shapes format
-    saveAnnotations(buildFilePath(resultsDir, intestineRegion[0].getName()))
+        // add detections and save detections
+        clearDetections()
+        addObjects(cells)
+        addObjects(intestineRegion)
+        resolveHierarchy()
+        // Save annotations in Shapes format
+        saveAnnotations(buildFilePath(resultsDir, s.getName()))
+    }
 
     }
 
