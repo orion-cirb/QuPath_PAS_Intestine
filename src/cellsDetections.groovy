@@ -107,17 +107,23 @@ for (entry in project.getImageList()) {
     }
     // loop over sections
     def index = 0
+    def cellBackground = 0.7
+    def minCellArea = 30
+    def maxCellArea = 200
     for (s in intestineRegion) {
         s.setName(imgNameWithOutExt + "_Intestine_" + index)
         index++
         // get annotation area
         def regionArea = s.getROI().getScaledArea(pixelWidth, pixelWidth)
         println s.getName() + ' area = ' + regionArea + ' ' + pixelUnit
-       // selectObjects(s)
+       // if intestineRegion.size() > 1 ask for background cell intensity for current region
+        if (intestineRegion.size() > 1)
+            Dialogs.showInputDialog("Define cell background for region"+s.getName(), "Initial background = "+cellBackground, cellBackground)
+
 
         // Do cells detections
         stardistCells.detectObjects(imageData, s, true)
-        def cells = getDetectionObjects().findAll { it.getMeasurementList().getMeasurementValue('Area µm^2') > 30 && it.getMeasurementList().getMeasurementValue('PAS: Mean') > 0.7 }
+        def cells = getDetectionObjects().findAll { it.getMeasurementList().getMeasurementValue('Area µm^2') > minCellArea && it.getMeasurementList().getMeasurementValue('Area µm^2') < maxCellArea && it.getMeasurementList().getMeasurementValue('PAS: Mean') > cellBackground }
         cells.each { it.setPathClass(cellsClass) }
         println 'Nb cells in region = ' + cells.size()
 
@@ -132,7 +138,7 @@ for (entry in project.getImageList()) {
         def cellsMeanArea = getObjectsParameters(cells, 'Area µm^2')[1]
         def cellsStdArea = getObjectsParameters(cells, 'Area µm^2')[2]
         def cellsMedianArea = getObjectsParameters(cells, 'Area µm^2')[3]
-        println 'Mean cells intensity in region = ' + cellsMeanArea
+        println 'Mean cells Area in region = ' + cellsMeanArea
 
         // Results
         def results = imgNameWithOutExt + '\t' + s.getName() + '\t' + regionArea + '\t' + cells.size() + '\t' + cells.size() / regionArea + '\t' + cellsMeanInt + '\t' + cellsStdInt + '\t' + cellsMedianInt+ '\t' + cellsSumArea + '\t' + cellsMeanArea + '\t' + cellsStdArea + '\t' + cellsMedianArea + '\n'
