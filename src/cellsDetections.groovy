@@ -118,8 +118,7 @@ for (entry in project.getImageList()) {
         println s.getName() + ' area = ' + regionArea + ' ' + pixelUnit
        // if intestineRegion.size() > 1 ask for background cell intensity for current region
         if (intestineRegion.size() > 1)
-            Dialogs.showInputDialog("Define cell background for region"+s.getName(), "Initial background = "+cellBackground, cellBackground)
-
+            cellBackground = Dialogs.showInputDialog("Define cell background for region"+s.getName(), "Initial background = "+cellBackground, cellBackground)
 
         // Do cells detections
         stardistCells.detectObjects(imageData, s, true)

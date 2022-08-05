@@ -32,8 +32,8 @@
       <root url="jar://$PROJECT_DIR$/lib/groovy-console-4.0.2.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/groovy-4.0.2.jar!/" />
       <root url="file:///opt/QuPath/lib/app" />
-      <root url="jar://$USER_HOME$/QuPath/extensions/qupath-extension-stardist-0.3.0.jar!/" />
       <root url="jar://$USER_HOME$/QuPath/extensions/qupath-extension-tensorflow-0.3.0.jar!/" />
+      <root url="jar://$USER_HOME$/QuPath/extensions/qupath-extension-stardist-0.3.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <NATIVE>
