@@ -7,14 +7,12 @@
 
 ### Images description
 
-2D images taken with the Axioscan
-
-*Cy3* channel: isolectine (vessels)
+2D images of intestine sections taken with a slide scanner
 
 ### Plugin description
 
-* Detect vessels and holes in the tissue with a pixel classifier
-* Give their number and area in each annotation provided
+* Detect the tissue contour and holes with a pixel classifier
+* Detect cells with Stardist
 
 ### Dependencies
 
