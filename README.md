@@ -13,7 +13,7 @@
 
 * Perform color deconvolution 
 * Detect the tissue contour and holes with a pixel classifier
-* Detect cells with Stardist
+* Detect cells in the tissue with Stardist
 
 ### Dependencies
 
