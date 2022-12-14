@@ -11,12 +11,14 @@
 
 ### Plugin description
 
+* Perform color deconvolution 
 * Detect the tissue contour and holes with a pixel classifier
 * Detect cells with Stardist
 
 ### Dependencies
 
-* **QuPath pixel classifier** named *vesselsClassifier.json*
+* **QuPath pixel classifier** named *intestine.json*
+* *Stardist** QuPath extension + *dsb2018_heavy_augment.pb* model
 
 ### Version history
 
