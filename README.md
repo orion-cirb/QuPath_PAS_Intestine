@@ -18,7 +18,7 @@
 ### Dependencies
 
 * **QuPath pixel classifier** named *intestine.json*
-* *Stardist** QuPath extension + *dsb2018_heavy_augment.pb* model
+* **Stardist** QuPath extension + *dsb2018_heavy_augment.pb* model
 
 ### Version history
 
